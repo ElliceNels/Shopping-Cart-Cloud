@@ -39,23 +39,21 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Set up Amazon ECR
-        uses: aws-actions/setup-ecr@v1
-        with:
-          region: ${{ env.AWS_REGION }}
-
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
 
+      - name: Build Docker image
+        run: docker build -t ${{ env.IMAGE_NAME }} .
+
       - name: Tag Docker image
-        run: docker tag ${{ env.IMAGE_NAME }} 185815467805.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
+        run: docker tag ${{ env.IMAGE_NAME }} ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
 
       - name: Push Docker image to Amazon ECR
-        run: docker push 185815467805.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
+        run: docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
 
       - name: Sign the published Docker image
         if: github.event_name != 'pull_request'
         env:
-          TAGS: 185815467805.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
+          TAGS: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
           DIGEST: latest
         run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
