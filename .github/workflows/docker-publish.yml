@@ -1,59 +1,39 @@
-name: Docker
+name: Deploy to ECR
 
 on:
-  schedule:
-    - cron: '43 9 * * *'
+ 
   push:
-    branches: [ "master" ]
-    tags: [ 'v*.*.*' ]
-  pull_request:
-    branches: [ "master" ]
-
-env:
-  AWS_REGION: us-east-1
-  IMAGE_NAME: shopping-cart
-  ECR_REPOSITORY: shop
+    branches: [ main ]
 
 jobs:
+  
   build:
+    
+    name: Build Image
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
 
+   
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
 
-      - name: Install cosign
-        if: github.event_name != 'pull_request'
-        uses: sigstore/cosign-installer@59acb6260d9c0ba8f4a2f9d9b48431a222b68e20 #v3.5.0
-        with:
-          cosign-release: 'v2.2.4'
+    - name: Check out code
+      uses: actions/checkout@v2
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v1
-
-      - name: Build Docker image
-        run: docker build -t ${{ env.IMAGE_NAME }} .
-
-      - name: Tag Docker image
-        run: docker tag ${{ env.IMAGE_NAME }} ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
-
-      - name: Push Docker image to Amazon ECR
-        run: docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
-
-      - name: Sign the published Docker image
-        if: github.event_name != 'pull_request'
-        env:
-          TAGS: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
-          DIGEST: latest
-        run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
+    - name: Build, tag, and push image to Amazon ECR
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: shop
+        IMAGE_TAG: shopping-cart
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
