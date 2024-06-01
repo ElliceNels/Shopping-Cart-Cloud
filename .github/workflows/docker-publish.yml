@@ -39,8 +39,8 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Set up Amazon ECR
-        uses: aws-actions/setup-ecr@v1
+      # - name: Set up Amazon ECR
+      #   uses: aws-actions/setup-ecr@v1
 
       - name: Login to Amazon ECR
         id: login-ecr
