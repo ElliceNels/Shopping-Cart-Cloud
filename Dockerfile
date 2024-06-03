@@ -1,7 +1,5 @@
-# Use the official Python image from the Docker Hub
 FROM python:3.8-slim
 
-# Set the working directory in the container
 WORKDIR /app
 
 # Install build dependencies
@@ -20,18 +18,14 @@ RUN pip install --upgrade pip && \
     pip install pipenv && \
     pipenv install --deploy
 
-# Copy the entire project into the container
 COPY . /app
 
-# Set the environment variables
 ENV FLASK_APP=main.py
 ENV FLASK_RUN_HOST=0.0.0.0
 
-# Expose port 80 to the outside world
 EXPOSE 80
 
-# Add a health check (optional but recommended)
+# Add a health check
 HEALTHCHECK CMD ["curl", "--fail", "http://localhost:80"] || exit 1
 
-# Run the application
 CMD ["pipenv", "run", "flask", "run", "--host=0.0.0.0", "--port=80"]
